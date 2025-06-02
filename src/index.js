@@ -2,6 +2,8 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from 'cors';
 import connectDB from "./db/connect.js";
+import userRoutes from "./routes/userRoutes.js";
+
 dotenv.config({path:'./env'});
 
 // variables
@@ -21,6 +23,8 @@ connectDB()
 // Middlewares
 app.use(cors('*'));
 app.use(express.json());
+app.use('/user', userRoutes);
+
 
 // Routes
 app.get('/',(req,res)=>{
@@ -30,7 +34,7 @@ app.get('/',(req,res)=>{
 // listen 
 app.listen(PORT, ()=>{
     try {
-       console.log(`Our server is live at ${PORT}`); 
+       console.log(`Our server is live at http://localhost:${PORT}`); 
     } catch (error) {
         console.log(`there is some error ${error}`);
     }
