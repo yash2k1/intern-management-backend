@@ -12,7 +12,7 @@ import jwt from 'jsonwebtoken';
 
     // Verify the token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // Now you can access `req.user.userId` in the route
+    req.user = { userId: decoded.userId };
     next();
   } catch (err) {
     res.status(403).json({ message: 'Invalid or expired token', error: err.message });

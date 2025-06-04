@@ -1,4 +1,3 @@
-// controller/user.js
 import User from '../models/user.models.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -140,14 +139,64 @@ export const getUser = async (req, res) => {
 };
 
 export const updateUser = async (req, res) => {
-    try {
-        const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (!user) return res.status(404).json({ message: 'User not found' });
-        const { password, ...userWithoutPassword } = user.toObject();
-        res.status(200).json({message:"User details are being updated." , userWithoutPassword});
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+  try {
+    const requestingUser = await User.findById(req.user.userId); // ID from auth middleware
+    if (!requestingUser) {
+      return res.status(403).json({ message: 'Unauthorized access' });
     }
+
+    const isSelfUpdate = req.user.userId === req.params.id;
+
+    // Disallow all updates if not HR or MENTOR and not self
+    if (!isSelfUpdate && !['HR', 'MENTOR'].includes(requestingUser.role)) {
+      return res.status(403).json({ message: 'You are not allowed to update other users' });
+    }
+
+    // Disallow changing role/status unless you're HR or MENTOR (with restrictions)
+    const updates = { ...req.body };
+    if (!['HR', 'MENTOR'].includes(requestingUser.role)) {
+      delete updates.role;
+      delete updates.status;
+    }
+
+    // If MENTOR is trying to update role, disallow
+    if (
+      requestingUser.role === 'MENTOR' &&
+      ('role' in updates) &&
+      ['HR', 'MENTOR'].includes(updates.role)
+    ) {
+      return res.status(403).json({ message: 'MENTOR cannot assign HR or MENTOR roles' });
+    }
+
+    // Only HR can change role freely
+    if (requestingUser.role !== 'HR') {
+      delete updates.role;
+    }
+
+    // Only HR and MENTOR can change status of others
+    if (!isSelfUpdate && !['HR', 'MENTOR'].includes(requestingUser.role)) {
+      delete updates.status;
+    }
+
+    // Prevent users from modifying others' email/password
+    if (!isSelfUpdate) {
+      delete updates.email;
+      delete updates.password;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, updates, {
+      new: true,
+    });
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const { password, ...userWithoutPassword } = updatedUser.toObject();
+    res.status(200).json({ message: 'User updated successfully', user: userWithoutPassword });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
 
 

@@ -12,7 +12,7 @@ import {
     signup,
     updateUser,
     verifyEmail,
-} from '../controller/userController.js';
+} from '../controller/user.controller.js';
 import verifyToken  from '../middleware/verifyToken.js';
 
 const userRoutes = express.Router();
