@@ -17,6 +17,7 @@ export const signup = async (req, res) => {
 };
 
 export const signin = async (req, res) => {
+    console.log("Sending 200 with user data...");
     try {
         const { email, password } = req.body;
         const user = await User.findOne({ email });
