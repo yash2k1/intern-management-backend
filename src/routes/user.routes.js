@@ -4,6 +4,7 @@ import {
   changePassword,
   deleteUser,
   forgotPassword,
+  getAllUsers,
   getUser,
   resetPassword,
   sendVerificationEmail,
@@ -30,6 +31,8 @@ userRoutes.route("/send-verification-email").post(
 userRoutes.route("/verify-email").post(verifyEmail);
 userRoutes.route("/forgot-password").post(forgotPassword);
 userRoutes.route("/reset-password/:token").put(resetPassword);
+userRoutes.route("/change-password").put(verifyToken, changePassword);
+userRoutes.route("/get-all-users").get(verifyToken, getAllUsers);
 
 userRoutes
   .route("/:id")
@@ -37,6 +40,5 @@ userRoutes
   .put(verifyToken, updateUser)
   .delete(verifyToken, deleteUser);
 
-userRoutes.route("/change-password/:id").put(verifyToken, changePassword);
 
 export default userRoutes;

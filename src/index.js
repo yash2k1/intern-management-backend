@@ -22,21 +22,24 @@ connectDB()
   });
 
 // Middlewares
+app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:5173", // ✅ Vite dev server
-    // methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    // allowedHeaders: ["Content-Type", "Authorization"],
+    origin: "*", // ✅ Vite dev server
+    // origin: "http://localhost:5173", // ✅ Vite dev server
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     // credentials: true,
   })
 );
-app.use(express.json());
-// ───────────────── Request logger ─────────────────
+// // ───────────────── Request logger ─────────────────
 app.use((req, res, next) => {
-  console.log(`✅ ${res.statusCode} ${req.method} ${req.originalUrl}`);
+  res.on("finish", () => {
+    console.log(`✅ ${res.statusCode} ${req.method} ${req.originalUrl}`);
+  });
   next();
 });
-// ───────────────────────────────────────────────────
+// // ───────────────────────────────────────────────────
 
 setupRoutes(app);
 
