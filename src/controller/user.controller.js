@@ -52,14 +52,17 @@ export const signup = async (req, res) => {
 
 export const signin = async (req, res) => {
   try {
-    const { email, password,roleRequested } = req.body;
+    const { email, password, roleRequested } = req.body;
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
-    
+    console.log("user role , role requested", user.role, roleRequested);
+
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ message: "Invalid credentials" });
-    if (user.role!=roleRequested)   return res.status(403).json({ message: `User not authorized for the role: ${roleRequested}` });
-    
+    if (user.role != roleRequested.toUpperCase())
+      return res.status(403).json({
+        message: `User not authorized for the role: ${roleRequested}`,
+      });
 
     const payload = {
       userId: user._id,
@@ -69,7 +72,6 @@ export const signin = async (req, res) => {
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
-    
 
     const { password: _, ...userWithoutPassword } = user.toObject();
     res
@@ -93,9 +95,13 @@ export const signout = async (req, res) => {
 
     await BlacklistedToken.create({ token, expiresAt });
 
-    res.status(200).json({ message: "Successfully signed out (token blacklisted)." });
+    res
+      .status(200)
+      .json({ message: "Successfully signed out (token blacklisted)." });
   } catch (error) {
-    res.status(500).json({ message: "Error signing out", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error signing out", error: error.message });
   }
 };
 
@@ -115,10 +121,9 @@ export const sendVerificationEmail = async (req, res) => {
     // Exclude password from user object before sending response
     const id = user.toObject()._id.toString();
 
-
     res.status(200).json({
       message: "Verification email sent successfully",
-      user: {_Id:id},
+      user: { _Id: id },
     });
   } catch (error) {
     console.error("Error sending verification email:", error);
@@ -159,8 +164,7 @@ export const forgotPassword = async (req, res) => {
     const { email } = req.body;
 
     const user = await User.findOne({ email });
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     await generateAndSendEmail(user, "RESET");
 
@@ -168,7 +172,9 @@ export const forgotPassword = async (req, res) => {
       message: "Password reset email sent. Please check your inbox.",
     });
   } catch (error) {
-    res.status(500).json({ message: "Something went wrong", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Something went wrong", error: error.message });
   }
 };
 
@@ -329,7 +335,9 @@ export const deleteUser = async (req, res) => {
     const isHR = requestingUser.role === "HR";
 
     if (!isSelf && !isHR) {
-      return res.status(403).json({ message: "You are not allowed to delete this user" });
+      return res
+        .status(403)
+        .json({ message: "You are not allowed to delete this user" });
     }
 
     const user = await User.findByIdAndDelete(targetUserId);
@@ -340,7 +348,6 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 export const changePassword = async (req, res) => {
   try {
