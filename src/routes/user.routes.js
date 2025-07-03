@@ -21,18 +21,13 @@ const userRoutes = express.Router();
 userRoutes.route("/signup").post(signup);
 userRoutes.route("/signin").post(signin);
 userRoutes.route("/signout").post(verifyToken, signout);
-userRoutes.route("/send-verification-email").post(
-  (req, res, next) => {
-    next();
-  },
-  verifyToken,
-  sendVerificationEmail
-);
+userRoutes.route("/send-verification-email").post(sendVerificationEmail);
 userRoutes.route("/verify-email").post(verifyEmail);
 userRoutes.route("/forgot-password").post(forgotPassword);
 userRoutes.route("/reset-password/:token").put(resetPassword);
 userRoutes.route("/change-password").put(verifyToken, changePassword);
 userRoutes.route("/get-all-users").get(verifyToken, getAllUsers);
+
 
 userRoutes
   .route("/:id")

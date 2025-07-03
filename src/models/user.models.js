@@ -4,7 +4,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, unique: true, required: true },
   password: { type: String, required: true },
   roleRequested: { type: String, enum: ['INTERN', 'MENTOR', 'HR'] },
-  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  status: { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED'], default: 'PENDING' },
   role: { type: String, enum: ['HR', 'MENTOR', 'INTERN', 'USER'], default: 'USER' },
   isEmailVerified: { type: Boolean, default: false },
   verifyEmailOtp: { type: String, default: null },

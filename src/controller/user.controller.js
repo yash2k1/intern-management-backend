@@ -5,39 +5,36 @@ import jwt from "jsonwebtoken";
 import { generateAndSendEmail } from "../../utils/verificationHelper.js";
 import BlacklistedToken from "../models/blacklistedToken.models.js";
 
+
 export const signup = async (req, res) => {
   try {
-    const { fullName, email, password, roleRequested } = req.body;
+    // Trim inputs before use
+    let { fullName, email, password, roleRequested } = req.body;
+    fullName = fullName.trim();
+    email = email.trim();
+    roleRequested = roleRequested.trim();
 
-    // ✅ 1. Validate required fields
     if (!fullName || !email || !password || !roleRequested) {
       return res.status(400).json({ message: "All fields are required." });
     }
 
-    // ✅ 2. Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res
-        .status(409)
-        .json({ message: "User with this email already exists." });
+      return res.status(409).json({ message: "User with this email already exists." });
     }
 
-    // ✅ 3. Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ 4. Create and save user
     const user = new User({
       fullName,
       email,
       password: hashedPassword,
-      roleRequested,
+      roleRequested: roleRequested.toUpperCase(),
     });
     await user.save();
 
-    // ✅ 5. Send email verification OTP
     await generateAndSendEmail(user, "VERIFY");
 
-    // ✅ 6. Remove password from response
     const { password: _, ...userWithoutPassword } = user.toObject();
 
     res.status(201).json({
@@ -52,35 +49,42 @@ export const signup = async (req, res) => {
 
 export const signin = async (req, res) => {
   try {
-    const { email, password, roleRequested } = req.body;
+    // Trim inputs before use
+    let { email, password, roleRequested } = req.body;
+    email = email.trim();
+    roleRequested = roleRequested.trim();
+
+    const requestedRole = roleRequested.toUpperCase();
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
-    console.log("user role , role requested", user.role, roleRequested);
+
+    if (!user.isEmailVerified) {
+      return res.status(403).json({ message: "Email not verified. Please verify your email before logging in." });
+    }
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ message: "Invalid credentials" });
-    if (user.role != roleRequested.toUpperCase())
-      return res.status(403).json({
-        message: `User not authorized for the role: ${roleRequested}`,
-      });
+    if (user.role != requestedRole) {
+      return res.status(403).json({ message: `User not authorized for the role: ${requestedRole}` });
+    }
 
     const payload = {
       userId: user._id,
       email: user.email,
-      role: user.role, // ✅ Make sure this exists in the DB
+      role: user.role.toUpperCase(),
+      userName: user.fullName,
     };
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 
     const { password: _, ...userWithoutPassword } = user.toObject();
-    res
-      .status(200)
-      .json({ message: "Signin successful", token, user: userWithoutPassword });
+    res.status(200).json({ message: "Signin successful", token, user: userWithoutPassword });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 export const signout = async (req, res) => {
   try {
@@ -88,37 +92,36 @@ export const signout = async (req, res) => {
     if (!token) return res.status(400).json({ message: "Token missing" });
 
     const decoded = jwt.decode(token);
-    if (!decoded?.exp)
-      return res.status(400).json({ message: "Invalid token" });
+    if (!decoded?.exp) return res.status(400).json({ message: "Invalid token" });
 
     const expiresAt = new Date(decoded.exp * 1000);
-
     await BlacklistedToken.create({ token, expiresAt });
 
-    res
-      .status(200)
-      .json({ message: "Successfully signed out (token blacklisted)." });
+    res.status(200).json({ message: "Successfully signed out (token blacklisted)." });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error signing out", error: error.message });
+    res.status(500).json({ message: "Error signing out", error: error.message });
   }
 };
 
 export const sendVerificationEmail = async (req, res) => {
   try {
-    if (!req.user || !req.user.userId) {
-      return res.status(400).json({ message: "Missing userId in request" });
+    const { email } = req.body;
+
+    // ✅ Check if email is provided
+    if (!email) {
+      return res.status(400).json({ message: "Email is required in request" });
     }
 
-    const user = await User.findById(req.user.userId);
+    // ✅ Find user by email
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
+    // ✅ Send verification OTP
     await generateAndSendEmail(user, "VERIFY");
 
-    // Exclude password from user object before sending response
+    // ✅ Exclude password from user object before sending response
     const id = user.toObject()._id.toString();
 
     res.status(200).json({
@@ -222,57 +225,76 @@ export const getUser = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 // pending
 export const updateUser = async (req, res) => {
   try {
-    const requestingUser = await User.findById(req.user.userId); // ID from auth middleware
+    const requestingUser = await User.findById(req.user.userId);
     if (!requestingUser) {
       return res.status(403).json({ message: "Unauthorized access" });
     }
 
     const isSelfUpdate = req.user.userId === req.params.id;
+    const updates = { ...req.body };
 
-    // Disallow all updates if not HR or MENTOR and not self
+    // 🚫 Rule 1: If not self and not HR/MENTOR, block
     if (!isSelfUpdate && !["HR", "MENTOR"].includes(requestingUser.role)) {
       return res
         .status(403)
         .json({ message: "You are not allowed to update other users" });
     }
 
-    // Disallow changing role/status unless you're HR or MENTOR (with restrictions)
-    const updates = { ...req.body };
+    // 🛡️ Get the target user (whose info is being updated)
+    const targetUser = await User.findById(req.params.id);
+    if (!targetUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // 🚫 Rule 2: If the requesting user is not HR or MENTOR, disallow role/status updates
     if (!["HR", "MENTOR"].includes(requestingUser.role)) {
       delete updates.role;
       delete updates.status;
     }
 
-    // If MENTOR is trying to update role, disallow
+    // 🚫 Rule 3: If MENTOR trying to assign HR/MENTOR role — block it
     if (
       requestingUser.role === "MENTOR" &&
       "role" in updates &&
-      ["HR", "MENTOR"].includes(updates.role)
+      ["HR", "MENTOR"].includes(updates.role.toUpperCase())
     ) {
       return res
         .status(403)
         .json({ message: "MENTOR cannot assign HR or MENTOR roles" });
     }
 
-    // Only HR can change role freely
-    if (requestingUser.role !== "HR") {
-      delete updates.role;
+    // ✅ Rule 4: Allow HR to change role, but only if target user is APPROVED
+    if (
+      requestingUser.role === "HR" &&
+      "role" in updates &&
+      targetUser.status !== "APPROVED"
+    ) {
+      return res.status(400).json({
+        message:
+          "Cannot change role until the user is APPROVED. Please approve the user first.",
+      });
     }
 
-    // Only HR and MENTOR can change status of others
-    if (!isSelfUpdate && !["HR", "MENTOR"].includes(requestingUser.role)) {
+    // ✅ Rule 5: MENTOR can change role/status only if user is APPROVED
+    if (
+      requestingUser.role === "MENTOR" &&
+      targetUser.status !== "APPROVED"
+    ) {
+      delete updates.role;
       delete updates.status;
     }
 
-    // Prevent users from modifying others' email/password
+    // 🚫 Rule 6: Prevent changing others' email or password
     if (!isSelfUpdate) {
       delete updates.email;
       delete updates.password;
     }
 
+    // ✅ Proceed to update user
     const updatedUser = await User.findByIdAndUpdate(req.params.id, updates, {
       new: true,
     });
@@ -290,6 +312,7 @@ export const updateUser = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 // pending
 export const getAllUsers = async (req, res) => {
   try {

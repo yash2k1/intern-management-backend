@@ -20,12 +20,12 @@ export const generateAndSendEmail = async (user, type) => {
     const url = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
     await sendEmail(url, user.email, type);
   } else {
-    const token = Math.floor(100000 + Math.random() * 900000).toString();
-    user.verifyEmailOtp = token;
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.verifyEmailOtp = otp;
     user.verifyEmailOtpExpire = expiry;
 
-    const url = `${process.env.FRONTEND_URL}/verify-email?userId=${user._id}&otp=${token}`;
-    await sendEmail(url, user.email, type);
+    const url = `${process.env.FRONTEND_URL}/verify-email?userId=${user._id}&otp=${otp}`;
+    await sendEmail(url, user.email,type, otp);
   }
 
   await user.save();
