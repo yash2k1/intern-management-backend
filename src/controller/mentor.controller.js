@@ -1,6 +1,6 @@
-import Mentor from '../models/mentor.model.js';
-import Intern from '../models/intern.model.js';
-import User from '../models/user.model.js';
+import Mentor from '../models/mentor.models.js';
+import Intern from '../models/Intern.models.js';
+import User from '../models/user.models.js';
 
 // Get all mentors
 export const getAllMentors = async (req, res) => {

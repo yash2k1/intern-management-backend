@@ -1,11 +1,14 @@
 import User from "../models/user.models.js"; // unified user model
+import Mentor from "../models/mentor.models.js";
 
 export const assignMentorToIntern = async (req, res) => {
   try {
     const { internId, mentorId } = req.body;
 
     if (!internId || !mentorId) {
-      return res.status(400).json({ message: "internId and mentorId are required" });
+      return res
+        .status(400)
+        .json({ message: "internId and mentorId are required" });
     }
 
     const intern = await User.findOne({ _id: internId, role: "INTERN" });
@@ -13,7 +16,7 @@ export const assignMentorToIntern = async (req, res) => {
       return res.status(404).json({ message: "Intern not found" });
     }
 
-    const mentor = await User.findOne({ _id: mentorId, role: "MENTOR" });
+    const mentor = await Mentor.findOne({ _id: mentorId });
     if (!mentor) {
       return res.status(404).json({ message: "Mentor not found" });
     }
@@ -22,10 +25,15 @@ export const assignMentorToIntern = async (req, res) => {
     intern.mentorId = mentorId;
     await intern.save();
 
+    if (!mentor.interns.includes(internId)) {
+      mentor.interns.push(internId);
+      await mentor.save();
+    }
+
     res.status(200).json({
       message: "Mentor assigned to intern successfully",
       internId,
-      mentorId
+      mentorId,
     });
   } catch (error) {
     console.error("Error assigning mentor:", error);
@@ -38,7 +46,9 @@ export const updateUserStatus = async (req, res) => {
     const { userIdToUpdate, status } = req.body;
 
     if (!userIdToUpdate || !status) {
-      return res.status(400).json({ message: "userIdToUpdate and status are required" });
+      return res
+        .status(400)
+        .json({ message: "userIdToUpdate and status are required" });
     }
 
     const user = await User.findById(userIdToUpdate);
@@ -69,7 +79,9 @@ export const assignRoleToUser = async (req, res) => {
     }
 
     const allowedRoles = ["INTERN", "MENTOR", "HR", "ADMIN"];
-    if (!allowedRoles.includes(role.toUpperCase())) {
+    const newRole = role.toUpperCase();
+
+    if (!allowedRoles.includes(newRole)) {
       return res.status(400).json({ message: "Invalid role" });
     }
 
@@ -78,11 +90,29 @@ export const assignRoleToUser = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    user.role = role.toUpperCase();
+    const previousRole = user.role;
+    user.role = newRole;
     await user.save();
 
+    // ✅ If new role is MENTOR, add to Mentor collection if not present
+    if (newRole === "MENTOR") {
+      const existingMentor = await Mentor.findOne({ userId: user._id });
+
+      if (!existingMentor) {
+        await Mentor.create({
+          userId: user._id,
+          interns: [],
+        });
+      }
+    }
+
+    // ✅ If previous role was MENTOR and new role is NOT MENTOR, remove from Mentor collection
+    if (previousRole === "MENTOR" && newRole !== "MENTOR") {
+      await Mentor.deleteOne({ userId: user._id });
+    }
+
     res.status(200).json({
-      message: "Role assigned successfully",
+      message: `Role changed from ${previousRole} to ${newRole}`,
       userId: user._id,
       newRole: user.role,
     });
