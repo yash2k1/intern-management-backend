@@ -5,7 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import connectDB from "./db/connect.js";
-import setupRoutes from "./Router.js";
+import setupRoutes from "./router.js";
 
 dotenv.config({ path: "./env" });
 
