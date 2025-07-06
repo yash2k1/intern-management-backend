@@ -12,9 +12,9 @@ const setupRoutes = (app) => {
   app.use("/hr", hrRoutes);
   app.use("/mentor", mentorRoutes);
   app.use("/project", projectRoutes);
+  app.use("/department", departmentRoutes);
   //   app.use('/certificate', certificateRoutes);
   //   app.use('/acadmics', acadmicsRoutes);
-  app.use("/department", departmentRoutes);
 };
 
 export default setupRoutes;
