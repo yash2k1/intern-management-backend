@@ -12,7 +12,7 @@ export const createIntern = async (req, res) => {
             fullName,
             email,
             phoneNumber,
-            aadhaar,
+            aadhar,
             addressPresent,
             addressPermanent,
             collegeName,
@@ -41,7 +41,7 @@ export const createIntern = async (req, res) => {
         fullName = trimIfString(fullName);
         email = trimIfString(email);
         phoneNumber = trimIfString(phoneNumber);
-        aadhaar = trimIfString(aadhaar);
+        aadhar = trimIfString(aadhar);
         addressPresent = trimIfString(addressPresent);
         addressPermanent = trimIfString(addressPermanent);
         collegeName = trimIfString(collegeName);
@@ -81,17 +81,16 @@ export const createIntern = async (req, res) => {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
 
-        // 2. Validate email and full name match (after trimming)
-        if (user.email.trim() !== email || user.fullName.trim() !== fullName) {
+        // 2. Validate email match (after trimming)
+        if (user.email.trim() !== email) {
             return res.status(400).json({
                 success: false,
-                message: 'Provided email or full name does not match with user record',
+                message: 'Provided email does not match with user record',
             });
         }
 
         // 3. Optionally update user fields
         if (fullName) user.fullName = fullName;
-        if (email) user.email = email;
         if (user.role !== 'INTERN') user.role = 'INTERN';
         await user.save();
 
@@ -99,7 +98,7 @@ export const createIntern = async (req, res) => {
         const intern = await Intern.create({
             userId,
             phoneNumber,
-            aadhaar,
+            aadhar,
             addressPresent,
             addressPermanent,
             collegeName,
@@ -153,8 +152,6 @@ export const createIntern = async (req, res) => {
     }
 };
 
-
-
 //Get all interns
 export const getAllInterns = async (req, res) => {
     try {
@@ -171,54 +168,161 @@ export const getAllInterns = async (req, res) => {
     }
 };
 
-//Get intern by ID
-export const getInternById = async (req, res) => {
+//Get intern by user ID
+export const getInternByUserId = async (req, res) => {
     try {
-        const intern = await Intern.findById(req.params.id)
-            .select('remark')
-            .populate('userId', 'fullName email status')
-            .populate('assignDepartment', 'departments')
-            .populate('mentorId', 'userId')
-            .populate('semId');
+        const userId = req.params.id;
+
+        const intern = await Intern.findOne({ userId })
+            .populate("userId", "fullName email status")
+            .populate("assignDepartment", "departments")
+            .populate("mentorId", "userId")
+            .populate("semId");
 
         if (!intern) {
-            return res.status(404).json({ success: false, message: 'Intern not found' });
+            return res.status(404).json({ success: false, message: "Intern not found" });
         }
 
         res.status(200).json({ success: true, intern });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+    } catch (err) {
+        console.error("[GET INTERN BY USER ID ERROR]", err);
+        res.status(500).json({ success: false, message: err.message });
     }
 };
-
-//Update intern and optionally user
+//Update intern by user id
 export const updateIntern = async (req, res) => {
     try {
-        const intern = await Intern.findById(req.params.id);
-        if (!intern) {
-            return res.status(404).json({ success: false, message: 'Intern not found' });
+        const userId = req.params.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
         }
 
-        // Update intern fields
-        Object.assign(intern, req.body);
-        await intern.save();
+        const intern = await Intern.findOne({ userId });
+        if (!intern) {
+            return res.status(404).json({ success: false, message: 'Intern not found for this user' });
+        }
 
-        // Optionally update user fields
-        const { fullName, email } = req.body;
-        if (fullName || email) {
-            const user = await User.findById(intern.userId);
-            if (user) {
-                if (fullName) user.fullName = fullName;
-                if (email) user.email = email;
-                await user.save();
+        if (req.body.email && req.body.email.trim() !== user.email.trim()) {
+            return res.status(400).json({ success: false, message: 'Provided email does not match user record' });
+        }
+
+        if (req.body.fullName) user.fullName = req.body.fullName.trim();
+        if (user.role !== 'INTERN') user.role = 'INTERN';
+        await user.save();
+
+        const normalizePath = (filePath) =>
+            filePath.replace(/^.*uploads[\\/]/, 'uploads/').replace(/\\/g, '/');
+
+        if (req.files) {
+            if (req.files['profileImage'] && req.files['profileImage'][0]) {
+                intern.profileImage = normalizePath(req.files['profileImage'][0].path);
+            }
+            if (req.files['signatureImage'] && req.files['signatureImage'][0]) {
+                intern.signatureImage = normalizePath(req.files['signatureImage'][0].path);
             }
         }
 
-        res.status(200).json({ success: true, message: 'Intern and user updated successfully.', intern });
+        const {
+            phoneNumber,
+            aadhar,
+            addressPresent,
+            addressPermanent,
+            collegeName,
+            course,
+            preference,
+            assignDepartment,
+            mentorId,
+            internshipDuration,
+            dob,
+            age,
+            mobile,
+            qualification,
+            branch,
+            familyForeign,
+            workedOrg,
+            workedDRDO,
+            identificationMarks,
+            remark,
+            courseDuration,
+            currentSemester,
+            semesterMarks,
+        } = req.body;
+
+        const fieldsToUpdate = {
+            phoneNumber,
+            aadhar,
+            addressPresent,
+            addressPermanent,
+            collegeName,
+            course,
+            preference,
+            assignDepartment,
+            mentorId,
+            internshipDuration,
+            dob,
+            age,
+            mobile,
+            qualification,
+            branch,
+            familyForeign,
+            workedOrg,
+            workedDRDO,
+            identificationMarks,
+            remark,
+        };
+
+        for (const key in fieldsToUpdate) {
+            if (fieldsToUpdate[key] !== undefined) {
+                intern[key] =
+                    typeof fieldsToUpdate[key] === 'string'
+                        ? fieldsToUpdate[key].trim()
+                        : fieldsToUpdate[key];
+            }
+        }
+
+        await intern.save();
+
+        let acadmics = null;
+
+        if (
+            courseDuration !== undefined ||
+            currentSemester !== undefined ||
+            semesterMarks !== undefined
+        ) {
+            acadmics = await Acadmics.findById(intern.semId);
+            if (acadmics) {
+                if (courseDuration !== undefined) acadmics.courseDuration = courseDuration;
+                if (currentSemester !== undefined) acadmics.currentSemester = currentSemester;
+
+                if (semesterMarks) {
+                    try {
+                        const parsedMarks =
+                            typeof semesterMarks === 'string' ? JSON.parse(semesterMarks) : semesterMarks;
+                        acadmics.semesterMarks = parsedMarks;
+                    } catch (e) {
+                        console.error('Failed to parse semesterMarks:', e);
+                    }
+                }
+
+                await acadmics.save();
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Intern details updated successfully',
+            intern,
+            user,
+            acadmics,
+        });
     } catch (error) {
+        console.error('[UPDATE INTERN ERROR]', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
 
 //Delete intern and linked academic record
 export const deleteIntern = async (req, res) => {
@@ -304,11 +408,10 @@ export const getUserAndIntern = async (req, res) => {
         }
 
         // 2. Get intern profile if exists
-        const intern = await Intern.findOne({ userId })
+        const intern = await Intern.findOne({ userId, statusCode: "WAITING" })
             .populate("assignDepartment", "departments")
             .populate("mentorId", "userId")
             .populate("semId");
-
         // 3. Extract academic details
         const acadmics = intern?.semId || null;
 
@@ -348,51 +451,9 @@ export const getUserAndIntern = async (req, res) => {
 };
 
 
-// ✅ 1. Send Fill Form Email
-export const sendFillForm = async (req, res) => {
-    try {
-      console.log("chala kya")  
-        const { userId } = req.body;
-        if (!userId) {
-            return res.status(400).json({ message: "User ID is required." });
-        }
+// ✅ 1. Send Fill Form Email && Send Update Form Email
 
-        // ✅ 1. Fetch user from DB
-        const user = await User.findById(userId).select("email fullName");
-        if (!user) {
-            return res.status(404).json({ message: "User not found." });
-        }
-
-        const email = user.email;
-        const userName = user.fullName;
-
-        // ✅ 2. Generate JWT token with userId, email, userName
-        const token = jwt.sign(
-            { userId, email, userName },
-            process.env.JWT_SECRET,
-            { expiresIn: "30m" }
-        );
-
-        // ✅ 3. Construct secure frontend form link
-        const link = `${process.env.FRONTEND_URL}/add-new-intern?token=${token}`;
-
-        // ✅ 4. Send email using utility
-        await InternFormEmail(email, "INTERN_FORM", {
-            subType: "FILL",
-            internName: userName,
-            link,
-        });
-
-        res.status(200).json({ message: "Fill form email sent successfully." });
-    } catch (err) {
-        console.error("Error sending fill form email:", err);
-        res.status(500).json({ message: "Failed to send fill form email." });
-    }
-}
-
-
-// ✅ 2. Send Update Form Email
-export const sendUpdateForm = async (req, res) => {
+export const sendInternFormLink = async (req, res) => {
     try {
         const { userId } = req.body;
 
@@ -400,100 +461,131 @@ export const sendUpdateForm = async (req, res) => {
             return res.status(400).json({ message: "User ID is required." });
         }
 
-        // ✅ 1. Fetch user from DB
+        // ✅ 1. Fetch user
         const user = await User.findById(userId).select("email fullName");
         if (!user) {
             return res.status(404).json({ message: "User not found." });
         }
-        const email = user.email;
-        const userName = user.fullName;
-        // ✅ 2. Generate JWT token with userId, email, userName
+
+        const { email, fullName: userName } = user;
+
+        // ✅ 2. Check if intern already exists
+        const existingIntern = await Intern.findOne({ userId });
+
+        const subType = existingIntern ? "UPDATE" : "FILL";
+
+        // ✅ 3. Generate JWT token
         const token = jwt.sign(
             { userId, email, userName },
             process.env.JWT_SECRET,
             { expiresIn: "30m" }
+            // { expiresIn: "30m" }
         );
 
-        // ✅ 3. Construct secure frontend form link
-        const link = `${process.env.FRONTEND_URL}/add-new-intern/${token}`;
+        // ✅ 4. Create secure frontend link (query param version)
+        const link = `${process.env.FRONTEND_URL}/${existingIntern ? `update-new-intern?token=${token}` : `add-new-intern?token=${token}`}`;
 
+        // ✅ 5. Send email
         await InternFormEmail(email, "INTERN_FORM", {
-            subType: "UPDATE",
+            subType,
             internName: userName,
             link,
         });
 
-        res.status(200).json({ message: "Update form email sent successfully." });
+        return res.status(200).json({
+            message: `${subType === "FILL" ? "Fill" : "Update"} form email sent successfully.`,
+        });
+
     } catch (err) {
-        console.error("Error sending update form email:", err);
-        res.status(500).json({ message: "Failed to send update form email." });
+        console.error("Error sending intern form email:", err);
+        return res.status(500).json({ message: "Failed to send intern form email." });
     }
-}
+};
 
 
 // ✅ 3. Send Acceptance Email
 export const sendAcceptance = async (req, res) => {
     try {
-         const { userId } = req.body;
-
+        const { userId } = req.body;
         if (!userId) {
-            return res.status(400).json({ message: "User ID is required." });
+            return res.status(400).json({ message: "User ID is required" });
         }
 
-        // ✅ 1. Fetch user from DB
+        // Find user to get email and name
         const user = await User.findById(userId).select("email fullName");
         if (!user) {
-            return res.status(404).json({ message: "User not found." });
+            return res.status(404).json({ message: "User not found" });
         }
-        const email = user.email;
-        const userName = user.fullName;
 
-        
+        // Update intern status to "NEW JOINING"
+        const intern = await Intern.findOneAndUpdate(
+            { userId },
+            { status: "NEW JOINING" },
+            { new: true }
+        );
+        if (!intern) {
+            return res.status(404).json({ message: "Intern record not found" });
+        }
 
-        // ✅ 3. Construct secure frontend form link
+        // Prepare email link (change FRONTEND_URL to your actual env var)
         const link = `${process.env.FRONTEND_URL}/sign-in`;
-        await InternFormEmail(email, "INTERN_FORM", {
+
+        // Send acceptance email
+        await InternFormEmail(user.email, "INTERN_FORM", {
             subType: "ACCEPTED",
-            internName:userName,
+            internName: user.fullName,
             link,
         });
 
-        res.status(200).json({ message: "Acceptance email sent successfully." });
-    } catch (err) {
-        console.error("Error sending acceptance email:", err);
-        res.status(500).json({ message: "Failed to send acceptance email." });
+        return res.status(200).json({
+            message: "Acceptance email sent and status updated successfully",
+            intern,
+        });
+    } catch (error) {
+        console.error("sendAcceptance error:", error);
+        return res.status(500).json({ message: "Failed to send acceptance email" });
     }
-}
-
+};
 // ✅ 4. Send Rejection Email
 export const sendRejection = async (req, res) => {
     try {
-          const { userId } = req.body;
+        const { userId } = req.body;
 
         if (!userId) {
             return res.status(400).json({ message: "User ID is required." });
         }
 
-        // ✅ 1. Fetch user from DB
         const user = await User.findById(userId).select("email fullName");
         if (!user) {
             return res.status(404).json({ message: "User not found." });
         }
-        const email = user.email;
-        const userName = user.fullName;
 
-      
-        await InternFormEmail(email, "INTERN_FORM", {
+        // Find the intern linked to the user
+        const intern = await Intern.findOne({ userId });
+        if (intern) {
+            // Delete related academics if any
+            if (intern.semId) {
+                await Acadmics.findByIdAndDelete(intern.semId);
+            }
+            // Delete intern document
+            await Intern.deleteOne({ _id: intern._id });
+        }
+
+        // Delete the user
+        await User.deleteOne({ _id: userId });
+
+        // Send rejection email
+        await InternFormEmail(user.email, "INTERN_FORM", {
             subType: "REJECTED",
-            internName:userName,
+            internName: user.fullName,
         });
 
-        res.status(200).json({ message: "Rejection email sent successfully." });
+        res.status(200).json({ message: "User deleted and rejection email sent successfully." });
     } catch (err) {
-        console.error("Error sending rejection email:", err);
-        res.status(500).json({ message: "Failed to send rejection email." });
+        console.error("Error in sendRejection:", err);
+        res.status(500).json({ message: "Failed to process rejection." });
     }
-}
+};
 
 
 

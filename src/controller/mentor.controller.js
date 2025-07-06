@@ -65,7 +65,8 @@ export const updateInternStatusByMentor = async (req, res) => {
     const { internId } = req.params;
     const { status } = req.body;
 
-    const allowedStatus = ['waiting', 'new Joining', 'ongoing', 'completed', 'depart', 'certified'];
+    const allowedStatus = ['WAITING', 'NEW JOINING', 'ONGOING', 'COMPLETED', 'DEPART', 'CERTIFIED'];
+
 
     if (!allowedStatus.includes(status)) {
         return res.status(400).json({ success: false, message: 'Invalid status value' });
@@ -90,21 +91,4 @@ export const updateInternStatusByMentor = async (req, res) => {
     }
 };
 
-// Admin/HR changes role of user to INTERN
-export const changeUserRoleToIntern = async (req, res) => {
-    const { userId } = req.params;
 
-    try {
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
-
-        user.role = 'INTERN';
-        await user.save();
-
-        res.status(200).json({ success: true, message: 'User role updated to INTERN', user });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-};

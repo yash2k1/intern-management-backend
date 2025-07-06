@@ -8,7 +8,7 @@ const internSchema = new mongoose.Schema({
   mobile: { type: String, required: true },
 
   // Identity
-  aadhaar: { type: String, unique: true, required: true },
+  aadhar: { type: String, unique: true, required: true },
   dob: { type: Date, required: true },
   age: { type: Number }, // consider changing to Number
 
@@ -41,7 +41,7 @@ const internSchema = new mongoose.Schema({
   signatureImage: { type: String, required: true },
 
   // Status and tracking
-  status: { type: String, enum: ["waiting", "ongoing", "completed", "depart", "certified"], default: "waiting" },
+  status: { type: String, enum: ["WAITING", "NEW JOINING", "ONGOING", "COMPLETED", "DEPART", "CERTIFIED"],default: "WAITING" },
   createdAt: { type: Date, default: Date.now },
   remark: { type: String, default: "kindly allow me to work with you" },
   certificateId: { type: mongoose.Schema.Types.ObjectId, ref: "Certificate" },
