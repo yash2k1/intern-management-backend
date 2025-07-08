@@ -1,5 +1,6 @@
 import User from "../models/user.models.js"; // unified user model
 import Mentor from "../models/mentor.models.js";
+import Intern from "../models/Intern.models.js";
 
 export const assignMentorToIntern = async (req, res) => {
   try {
@@ -11,24 +12,25 @@ export const assignMentorToIntern = async (req, res) => {
         .json({ message: "internId and mentorId are required" });
     }
 
-    const intern = await User.findOne({ _id: internId, role: "INTERN" });
+    const intern = await Intern.findById(internId);
     if (!intern) {
       return res.status(404).json({ message: "Intern not found" });
     }
 
-    const mentor = await Mentor.findOne({ _id: mentorId });
+    const mentor = await Mentor.findById(mentorId);
     if (!mentor) {
       return res.status(404).json({ message: "Mentor not found" });
     }
 
-    // Assign mentor to intern
-    intern.mentorId = mentorId;
-    await intern.save();
-
+    // Check if intern is already assigned to the mentor
     if (!mentor.interns.includes(internId)) {
       mentor.interns.push(internId);
       await mentor.save();
     }
+
+    // You can also store mentorId in intern if you want reverse reference
+    intern.mentorId = mentorId;
+    await intern.save();
 
     res.status(200).json({
       message: "Mentor assigned to intern successfully",
@@ -123,19 +125,23 @@ export const assignRoleToUser = async (req, res) => {
 };
 // HR changes role of user to INTERN
 export const changeUserRoleToIntern = async (req, res) => {
-    const { userId } = req.params;
+  const { userId } = req.params;
 
-    try {
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
-
-        user.role = 'INTERN';
-        await user.save();
-
-        res.status(200).json({ success: true, message: 'User role updated to INTERN', user });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
+
+    user.role = "INTERN";
+    await user.save();
+
+    res
+      .status(200)
+      .json({ success: true, message: "User role updated to INTERN", user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };

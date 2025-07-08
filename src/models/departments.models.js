@@ -1,10 +1,13 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-const departmentsSchema = new mongoose.Schema({
-  departments: {
-    type: String,
-    required: true
+const departmentsSchema = new mongoose.Schema(
+  {
+    departments: {
+      type: String,
+      required: true,
+    },
   },
-}, { timestamps: true });
+  { timestamps: true }
+);
 
-export default mongoose.model('Department', departmentsSchema);
+export default mongoose.model("Department", departmentsSchema);
