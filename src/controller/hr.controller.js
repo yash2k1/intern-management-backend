@@ -22,14 +22,15 @@ export const assignMentorToIntern = async (req, res) => {
       return res.status(404).json({ message: "Mentor not found" });
     }
 
-    // Check if intern is already assigned to the mentor
-    if (!mentor.interns.includes(internId)) {
-      mentor.interns.push(internId);
+    // Avoid duplicate entries in Requestedinterns
+    if (!mentor.Requestedinterns.includes(internId)) {
+      mentor.Requestedinterns.push(internId);
       await mentor.save();
     }
 
-    // You can also store mentorId in intern if you want reverse reference
+    // Store mentorId and update intern status
     intern.mentorId = mentorId;
+    intern.status = "NEW JOINING"; // ✅ Set status here
     await intern.save();
 
     res.status(200).json({
@@ -42,6 +43,7 @@ export const assignMentorToIntern = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 export const updateUserStatus = async (req, res) => {
   try {

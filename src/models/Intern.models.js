@@ -38,7 +38,11 @@ const internSchema = new mongoose.Schema(
     },
     mentorId: { type: mongoose.Schema.Types.ObjectId, ref: "Mentor" },
     internshipDuration: { type: String },
-    suggestedMentor: { type: mongoose.Schema.Types.ObjectId, ref: "Mentor", default: null },
+    suggestedMentor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Mentor",
+      default: null,
+    },
     // Additional info
     familyForeign: { type: String, required: true },
     workedOrg: { type: String, required: true },
@@ -54,6 +58,7 @@ const internSchema = new mongoose.Schema(
       type: String,
       enum: [
         "WAITING",
+        "APPROVED",
         "NEW JOINING",
         "ONGOING",
         "COMPLETED",

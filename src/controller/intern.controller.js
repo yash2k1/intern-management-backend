@@ -158,6 +158,7 @@ export const createIntern = async (req, res) => {
 export const getAllInterns = async (req, res) => {
   try {
     const interns = await Intern.find()
+      .select("status")
       .select("remark")
       .populate("userId", "fullName email")
       .populate("assignDepartment", "departments")
@@ -551,7 +552,7 @@ export const sendAcceptance = async (req, res) => {
     // Update intern status to "NEW JOINING"
     const intern = await Intern.findOneAndUpdate(
       { userId },
-      { status: "NEW JOINING" },
+      { status: "APPROVED" },
       { new: true }
     );
     if (!intern) {

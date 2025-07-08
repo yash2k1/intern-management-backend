@@ -4,9 +4,11 @@ import {
   getMentorById,
   createMentor,
   updateInternStatusByMentor,
-  removeInternFromMentor,
+  removeReqInternFromMentor,
   getMentorInterns,
   suggestAnotherMentor,
+  approveReqInterns,
+  getAllRequestedInterns,
 } from "../controller/mentor.controller.js";
 import verifyToken from "../middleware/verifyToken.js";
 
@@ -17,13 +19,19 @@ mentorRoutes
   .route("/intern/:internId/suggest-mentor")
   .put(verifyToken, suggestAnotherMentor);
 mentorRoutes.route("/").get(verifyToken, getAllMentors);
-mentorRoutes.route("/:id").get(verifyToken, getMentorById);
 mentorRoutes.route("/").post(verifyToken, createMentor);
 mentorRoutes
   .route("/intern/:internId/status")
   .put(verifyToken, updateInternStatusByMentor);
 mentorRoutes
   .route("/remove-intern/:internId")
-  .put(verifyToken, removeInternFromMentor);
+  .put(verifyToken, removeReqInternFromMentor);
+mentorRoutes.put(
+  "/approve-requested-intern/:internId",
+  verifyToken,
+  approveReqInterns
+);
+mentorRoutes.get("/requested-interns", verifyToken, getAllRequestedInterns);
+mentorRoutes.route("/:id").get(verifyToken, getMentorById);
 
 export default mentorRoutes;
