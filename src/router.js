@@ -5,6 +5,7 @@ import projectRoutes from "./routes/projectRoutes.js";
 import userRoutes from "./routes/user.routes.js";
 import hrRoutes from "./routes/hr.routes.js";
 import mentorRoutes from "./routes/mentor.routes.js";
+import certificateRoutes from "./routes/certificate.routes.js";
 
 const setupRoutes = (app) => {
   app.use("/user", userRoutes);
@@ -13,7 +14,7 @@ const setupRoutes = (app) => {
   app.use("/mentor", mentorRoutes);
   app.use("/project", projectRoutes);
   app.use("/department", departmentRoutes);
-  //   app.use('/certificate', certificateRoutes);
+    app.use('/certificate', certificateRoutes);
   //   app.use('/acadmics', acadmicsRoutes);
 };
 

@@ -8,11 +8,12 @@ import {
     getProjectsByDepartment
 } from '../controller/departments.controller.js';
 import verifyToken from '../middleware/verifyToken.js';
+import verifyHrToken from '../middleware/verifyHrToken.js';
 
 const departmentRoutes = express.Router();
 
 departmentRoutes.route('/')
-    .post(verifyToken, createDepartment)
+    .post(verifyHrToken, createDepartment)
     .get(verifyToken, getAllDepartments);
 
 departmentRoutes.route('/:id')

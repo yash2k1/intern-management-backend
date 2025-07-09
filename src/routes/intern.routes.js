@@ -10,7 +10,8 @@ import {
   sendAcceptance,
   sendRejection,
   sendInternFormLink,
-  getInternByUserId
+  getInternByUserId,
+  getInternsByStatus
 } from '../controller/intern.controller.js';
 import verifyToken from '../middleware/verifyToken.js';
 import  verifyHrToken  from '../middleware/verifyHrToken.js';
@@ -35,7 +36,9 @@ internRoutes.route('/')
 internRoutes.route("/send-fill-form").post(verifyHrToken, sendInternFormLink);
 internRoutes.route("/send-acceptance").post(verifyHrToken, sendAcceptance);
 internRoutes.route("/send-rejection").post(verifyHrToken, sendRejection);
+internRoutes.route("/get-intern").get(verifyHrToken, getInternsByStatus);
 internRoutes.route("/get-users-and-intern/:id").get(verifyHrToken, getUserAndIntern);
+
 // --------
 
 // Other routes with verifyToken

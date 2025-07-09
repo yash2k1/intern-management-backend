@@ -2,10 +2,11 @@ import mongoose from "mongoose";
 
 const departmentsSchema = new mongoose.Schema(
   {
-    departments: {
-      type: String,
-      required: true,
-    },
+    name: {
+    type: String,
+    required: true,
+    trim: true,
+  },
   },
   { timestamps: true }
 );

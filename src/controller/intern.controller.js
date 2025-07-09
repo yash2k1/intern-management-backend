@@ -178,7 +178,49 @@ export const getAllInterns = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+// Get interns filtered by one or more status values passed as query param 'status'
+// Example query:
+//  /interns?status=WAITING
+//  /interns?status=WAITING,CERTIFIED
 
+export const getInternsByStatus = async (req, res) => {
+  try {
+    // Get status query param, can be comma separated string or single value
+    const { status } = req.query;
+
+    let filter = {};
+
+    if (status) {
+      // Convert to array (if not already)
+      const statuses = Array.isArray(status)
+        ? status
+        : status.split(",").map((s) => s.trim().toUpperCase());
+
+      // Validate statuses against enum if you want (optional)
+
+      filter.status = { $in: statuses };
+    }
+
+    const interns = await Intern.find(filter)
+      .select("remark status certificateId") // add fields as needed
+      .populate("userId", "fullName email")
+      .populate("assignDepartment", "departments")
+      .populate("mentorId", "userId")
+      .populate("suggestedMentor", "userId")
+      .populate({
+        path: "suggestedMentor",
+        populate: {
+          path: "userId",
+          model: "User",
+          select: "fullName email",
+        },
+      });
+
+    res.status(200).json({ success: true, interns });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 //Get intern by user ID
 export const getInternByUserId = async (req, res) => {
   try {
